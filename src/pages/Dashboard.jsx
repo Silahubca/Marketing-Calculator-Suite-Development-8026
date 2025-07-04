@@ -17,24 +17,39 @@ const { FiHome, FiTrash2, FiGrid, FiList, FiHelpCircle, FiMenu, FiX, FiRefreshCw
 
 const Dashboard = () => {
   const location = useLocation();
-  const { 
-    calculations, 
-    isLoading, 
-    lastUpdate, 
-    clearAllCalculations, 
-    forceRefresh 
-  } = useCalculations();
-  
+  const { calculations, isLoading, lastUpdate, clearAllCalculations, forceRefresh } = useCalculations();
   const [selectedCalculation, setSelectedCalculation] = useState(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [viewMode, setViewMode] = useState('grid');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  // Refresh on route change
+  // Ensure component is mounted
   useEffect(() => {
-    console.log('🏠 Dashboard: Route change, refreshing...');
-    forceRefresh();
-  }, [location.pathname, forceRefresh]);
+    setMounted(true);
+    console.log('🏠 Dashboard: Component mounted');
+  }, []);
+
+  // Enhanced route change handling
+  useEffect(() => {
+    if (mounted) {
+      console.log('🏠 Dashboard: Route/location change detected:', location.pathname);
+      // Add a small delay to ensure other components have updated storage
+      const timeoutId = setTimeout(() => {
+        forceRefresh();
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [location.pathname, location.search, mounted, forceRefresh]);
+
+  // Additional refresh on component mount and updates
+  useEffect(() => {
+    if (mounted && !isLoading) {
+      console.log('🏠 Dashboard: Ensuring fresh data on mount/update');
+      forceRefresh();
+    }
+  }, [mounted, isLoading, forceRefresh]);
 
   const handleSelectCalculation = (calculation) => {
     setSelectedCalculation(calculation);
@@ -64,12 +79,29 @@ const Dashboard = () => {
   };
 
   // Debug info
-  console.log('🎯 Dashboard state:', {
+  console.log('🎯 Dashboard render state:', {
+    mounted,
     isLoading,
     calculationsCount: calculations.length,
     lastUpdate: new Date(lastUpdate).toLocaleTimeString(),
-    location: location.pathname
+    location: location.pathname,
+    hasCalculations: calculations.length > 0
   });
+
+  // Don't render until mounted
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <SafeIcon icon={FiGrid} className="h-6 w-6 text-blue-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Initializing Dashboard...</h3>
+          <p className="text-gray-600">Setting up your analytics</p>
+        </div>
+      </div>
+    );
+  }
 
   // Loading state
   if (isLoading) {
@@ -115,9 +147,13 @@ const Dashboard = () => {
                 <p className="text-sm md:text-base text-gray-600">
                   Advanced analytics and insights for data-driven marketing
                 </p>
-                {/* Simple Debug info */}
-                <div className="text-xs text-gray-400 mt-2">
-                  📊 {calculations.length} calculations | Updated: {new Date(lastUpdate).toLocaleTimeString()}
+                
+                {/* Enhanced Debug info */}
+                <div className="text-xs text-gray-400 mt-2 space-x-4">
+                  <span>📊 {calculations.length} calculations</span>
+                  <span>🕒 Updated: {new Date(lastUpdate).toLocaleTimeString()}</span>
+                  <span>📍 Route: {location.pathname}</span>
+                  <span>🔄 Mounted: {mounted ? 'Yes' : 'No'}</span>
                 </div>
               </div>
 
@@ -137,8 +173,8 @@ const Dashboard = () => {
                   <button
                     onClick={() => setViewMode('grid')}
                     className={`p-2 rounded-md transition-colors ${
-                      viewMode === 'grid' 
-                        ? 'bg-white text-blue-600 shadow-sm' 
+                      viewMode === 'grid'
+                        ? 'bg-white text-blue-600 shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
@@ -147,15 +183,15 @@ const Dashboard = () => {
                   <button
                     onClick={() => setViewMode('detailed')}
                     className={`p-2 rounded-md transition-colors ${
-                      viewMode === 'detailed' 
-                        ? 'bg-white text-blue-600 shadow-sm' 
+                      viewMode === 'detailed'
+                        ? 'bg-white text-blue-600 shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
                     <SafeIcon icon={FiList} className="h-4 w-4" />
                   </button>
                 </div>
-                
+
                 <button
                   onClick={handleManualRefresh}
                   className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
@@ -163,7 +199,7 @@ const Dashboard = () => {
                 >
                   <SafeIcon icon={FiRefreshCw} className="h-4 w-4" />
                 </button>
-                
+
                 <Link
                   to="/"
                   className="inline-flex items-center space-x-2 px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
@@ -171,13 +207,13 @@ const Dashboard = () => {
                   <SafeIcon icon={FiHome} className="h-4 w-4" />
                   <span>Back to Calculators</span>
                 </Link>
-                
+
                 {calculations.length > 0 && (
                   <button
                     onClick={handleClearAll}
                     className={`px-4 py-2 rounded-lg transition-colors inline-flex items-center space-x-2 ${
-                      showClearConfirm 
-                        ? 'bg-red-500 text-white hover:bg-red-600' 
+                      showClearConfirm
+                        ? 'bg-red-500 text-white hover:bg-red-600'
                         : 'text-gray-700 border border-gray-200 hover:bg-gray-50'
                     }`}
                   >
@@ -204,8 +240,8 @@ const Dashboard = () => {
                     <button
                       onClick={() => setViewMode('grid')}
                       className={`p-2 rounded-md transition-colors ${
-                        viewMode === 'grid' 
-                          ? 'bg-white text-blue-600 shadow-sm' 
+                        viewMode === 'grid'
+                          ? 'bg-white text-blue-600 shadow-sm'
                           : 'text-gray-600'
                       }`}
                     >
@@ -214,8 +250,8 @@ const Dashboard = () => {
                     <button
                       onClick={() => setViewMode('detailed')}
                       className={`p-2 rounded-md transition-colors ${
-                        viewMode === 'detailed' 
-                          ? 'bg-white text-blue-600 shadow-sm' 
+                        viewMode === 'detailed'
+                          ? 'bg-white text-blue-600 shadow-sm'
                           : 'text-gray-600'
                       }`}
                     >
@@ -223,7 +259,7 @@ const Dashboard = () => {
                     </button>
                   </div>
                 </div>
-                
+
                 <div className="flex flex-col space-y-2">
                   <button
                     onClick={handleManualRefresh}
@@ -232,7 +268,7 @@ const Dashboard = () => {
                     <SafeIcon icon={FiRefreshCw} className="h-4 w-4" />
                     <span>Refresh Data</span>
                   </button>
-                  
+
                   <Link
                     to="/"
                     className="inline-flex items-center space-x-2 px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
@@ -240,13 +276,13 @@ const Dashboard = () => {
                     <SafeIcon icon={FiHome} className="h-4 w-4" />
                     <span>Back to Calculators</span>
                   </Link>
-                  
+
                   {calculations.length > 0 && (
                     <button
                       onClick={handleClearAll}
                       className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                        showClearConfirm 
-                          ? 'bg-red-500 text-white hover:bg-red-600' 
+                        showClearConfirm
+                          ? 'bg-red-500 text-white hover:bg-red-600'
                           : 'text-gray-700 border border-gray-200 hover:bg-gray-50'
                       }`}
                     >
@@ -301,7 +337,7 @@ const Dashboard = () => {
                   <PerformanceInsights />
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-8">
                 <TrendCharts />
                 <div className="space-y-4 md:space-y-6">

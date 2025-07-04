@@ -16,90 +16,152 @@ export const CalculationProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
 
-  // Simple load function
+  // Load calculations function
   const loadCalculations = useCallback(() => {
     try {
+      console.log('🔄 CalculationContext: Loading calculations...');
       const saved = getSavedCalculations();
-      console.log('📊 Loading calculations:', saved.length);
+      console.log('📊 CalculationContext: Loaded', saved.length, 'calculations');
       setCalculations(saved);
       setLastUpdate(Date.now());
+      return saved;
     } catch (error) {
-      console.error('Error loading calculations:', error);
+      console.error('❌ CalculationContext: Error loading calculations:', error);
       setCalculations([]);
+      return [];
+    }
+  }, []);
+
+  // Enhanced save function
+  const saveCalculation = useCallback((calculatorId, inputs, results, calculatorName) => {
+    console.log('💾 CalculationContext: Saving calculation:', calculatorName);
+    
+    try {
+      const result = saveCalc(calculatorId, inputs, results, calculatorName);
+      if (result) {
+        // Immediate state update
+        const updated = loadCalculations();
+        console.log('✅ CalculationContext: Saved and updated state with', updated.length, 'calculations');
+        return result;
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ CalculationContext: Error saving calculation:', error);
+      return null;
+    }
+  }, [loadCalculations]);
+
+  // Enhanced delete function
+  const deleteCalculation = useCallback((calculationId) => {
+    console.log('🗑️ CalculationContext: Deleting calculation:', calculationId);
+    
+    try {
+      const result = deleteCalc(calculationId);
+      if (result) {
+        const updated = loadCalculations();
+        console.log('✅ CalculationContext: Deleted and updated state with', updated.length, 'calculations');
+        return result;
+      }
+      return false;
+    } catch (error) {
+      console.error('❌ CalculationContext: Error deleting calculation:', error);
+      return false;
+    }
+  }, [loadCalculations]);
+
+  // Enhanced clear function
+  const clearAllCalculations = useCallback(() => {
+    console.log('🧹 CalculationContext: Clearing all calculations');
+    
+    try {
+      const result = clearAll();
+      if (result) {
+        setCalculations([]);
+        setLastUpdate(Date.now());
+        console.log('✅ CalculationContext: Cleared all calculations');
+        return result;
+      }
+      return false;
+    } catch (error) {
+      console.error('❌ CalculationContext: Error clearing calculations:', error);
+      return false;
     }
   }, []);
 
   // Force refresh function
   const forceRefresh = useCallback(() => {
-    console.log('🔄 Force refresh triggered');
-    loadCalculations();
+    console.log('🔄 CalculationContext: Force refresh triggered');
+    const updated = loadCalculations();
+    console.log('✅ CalculationContext: Force refresh completed with', updated.length, 'calculations');
   }, [loadCalculations]);
 
-  // Enhanced save function
-  const saveCalculation = useCallback((calculatorId, inputs, results, calculatorName) => {
-    console.log('💾 Saving calculation:', calculatorName);
-    
-    const result = saveCalc(calculatorId, inputs, results, calculatorName);
-    if (result) {
-      // Immediate refresh after save
-      loadCalculations();
-    }
-    return result;
-  }, [loadCalculations]);
-
-  // Enhanced delete function
-  const deleteCalculation = useCallback((calculationId) => {
-    console.log('🗑️ Deleting calculation:', calculationId);
-    
-    const result = deleteCalc(calculationId);
-    if (result) {
-      // Immediate refresh after delete
-      loadCalculations();
-    }
-    return result;
-  }, [loadCalculations]);
-
-  // Enhanced clear function
-  const clearAllCalculations = useCallback(() => {
-    console.log('🧹 Clearing all calculations');
-    
-    const result = clearAll();
-    if (result) {
-      setCalculations([]);
-      setLastUpdate(Date.now());
-    }
-    return result;
-  }, []);
-
-  // Initial load
+  // Initial load and event listeners
   useEffect(() => {
-    console.log('🚀 Initial load');
+    console.log('🚀 CalculationContext: Initial setup');
+    
+    // Initial load
     loadCalculations();
     setIsLoading(false);
-  }, [loadCalculations]);
 
-  // Listen for storage changes
-  useEffect(() => {
+    // Enhanced event listeners
     const handleStorageChange = (e) => {
       if (e.key === 'marketing_calculations') {
-        console.log('📦 Storage change detected');
+        console.log('📦 CalculationContext: Storage change detected via storage event');
+        loadCalculations();
+      }
+    };
+
+    const handleCustomEvent = (e) => {
+      console.log('📦 CalculationContext: Custom calculator update event detected');
+      loadCalculations();
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('👁️ CalculationContext: Page became visible, refreshing...');
         loadCalculations();
       }
     };
 
     const handleFocus = () => {
-      console.log('👁️ Window focused, refreshing...');
+      console.log('👁️ CalculationContext: Window focused, refreshing...');
       loadCalculations();
     };
 
+    // Add all event listeners
     window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('calculatorUpdate', handleCustomEvent);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleFocus);
 
+    // Periodic refresh (every 5 seconds when active)
+    const intervalId = setInterval(() => {
+      if (!document.hidden) {
+        console.log('⏰ CalculationContext: Periodic refresh');
+        loadCalculations();
+      }
+    }, 5000);
+
+    // Cleanup
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('calculatorUpdate', handleCustomEvent);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
+      clearInterval(intervalId);
+      console.log('🧹 CalculationContext: Cleanup completed');
     };
   }, [loadCalculations]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🎯 CalculationContext: State updated:', {
+      calculationsCount: calculations.length,
+      isLoading,
+      lastUpdate: new Date(lastUpdate).toLocaleTimeString(),
+      firstCalculation: calculations[0]?.calculatorName || 'None'
+    });
+  }, [calculations, isLoading, lastUpdate]);
 
   const value = {
     calculations,

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
 
-const { FiCalculator, FiMenu, FiX, FiBookOpen, FiBarChart } = FiIcons;
+const { FiCalculator, FiMenu, FiX, FiBookOpen, FiBarChart, FiTool } = FiIcons;
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -45,6 +45,16 @@ const Header = () => {
               Calculators
             </Link>
             <Link
+              to="/tools"
+              className={`text-sm font-medium transition-colors ${
+                location.pathname === '/tools' || location.pathname.startsWith('/tools/') 
+                  ? 'text-blue-600' 
+                  : 'text-gray-700 hover:text-blue-600'
+              }`}
+            >
+              Marketing Tools
+            </Link>
+            <Link
               to="/dashboard"
               className={`text-sm font-medium transition-colors ${
                 location.pathname === '/dashboard' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
@@ -55,7 +65,9 @@ const Header = () => {
             <Link
               to="/blog"
               className={`text-sm font-medium transition-colors ${
-                location.pathname === '/blog' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                location.pathname === '/blog' || location.pathname.startsWith('/blog/') 
+                  ? 'text-blue-600' 
+                  : 'text-gray-700 hover:text-blue-600'
               }`}
             >
               Marketing Blog
@@ -92,6 +104,13 @@ const Header = () => {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Calculators
+              </Link>
+              <Link
+                to="/tools"
+                className="text-gray-700 hover:text-blue-600 transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Marketing Tools
               </Link>
               <Link
                 to="/dashboard"

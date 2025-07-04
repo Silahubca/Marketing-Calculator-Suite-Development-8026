@@ -23,37 +23,89 @@ export const saveCalculation = (calculatorId, inputs, results, calculatorName) =
     const limitedCalculations = savedCalculations.slice(0, 100);
     
     localStorage.setItem(STORAGE_KEYS.CALCULATIONS, JSON.stringify(limitedCalculations));
+
+    // Enhanced event dispatching for better detection
+    const events = [];
     
-    // Trigger multiple events for better detection
-    const storageEvent = new StorageEvent('storage', {
-      key: STORAGE_KEYS.CALCULATIONS,
-      newValue: JSON.stringify(limitedCalculations),
-      url: window.location.href
-    });
-    
-    const customEvent = new CustomEvent('calculatorUpdate', {
-      detail: { calculation, total: limitedCalculations.length }
-    });
-    
-    // Dispatch events
-    window.dispatchEvent(storageEvent);
-    window.dispatchEvent(customEvent);
-    
-    // Also try postMessage for cross-frame communication
-    if (window.parent !== window) {
-      window.parent.postMessage({
-        type: 'calculationSaved',
-        data: { calculation, total: limitedCalculations.length }
-      }, '*');
+    // Standard storage event
+    try {
+      const storageEvent = new StorageEvent('storage', {
+        key: STORAGE_KEYS.CALCULATIONS,
+        newValue: JSON.stringify(limitedCalculations),
+        oldValue: localStorage.getItem(STORAGE_KEYS.CALCULATIONS),
+        url: window.location.href
+      });
+      window.dispatchEvent(storageEvent);
+      events.push('storage');
+    } catch (e) {
+      console.warn('Could not dispatch storage event:', e);
     }
-    
-    console.log('💾 Calculation saved and events dispatched:', {
+
+    // Custom event
+    try {
+      const customEvent = new CustomEvent('calculatorUpdate', {
+        detail: {
+          action: 'save',
+          calculation,
+          total: limitedCalculations.length,
+          timestamp: Date.now()
+        },
+        bubbles: true
+      });
+      window.dispatchEvent(customEvent);
+      document.dispatchEvent(customEvent);
+      events.push('calculatorUpdate');
+    } catch (e) {
+      console.warn('Could not dispatch custom event:', e);
+    }
+
+    // Additional event for immediate updates
+    try {
+      const immediateEvent = new CustomEvent('calculationSaved', {
+        detail: {
+          calculation,
+          total: limitedCalculations.length
+        }
+      });
+      window.dispatchEvent(immediateEvent);
+      events.push('calculationSaved');
+    } catch (e) {
+      console.warn('Could not dispatch immediate event:', e);
+    }
+
+    // Cross-frame communication
+    try {
+      if (window.parent !== window) {
+        window.parent.postMessage({
+          type: 'calculationSaved',
+          data: {
+            calculation,
+            total: limitedCalculations.length
+          }
+        }, '*');
+        events.push('postMessage');
+      }
+    } catch (e) {
+      console.warn('Could not send postMessage:', e);
+    }
+
+    // Manual refresh trigger
+    try {
+      // Set a flag that other components can check
+      sessionStorage.setItem('calculation_updated', Date.now().toString());
+      events.push('sessionFlag');
+    } catch (e) {
+      console.warn('Could not set session flag:', e);
+    }
+
+    console.log('💾 Calculation saved successfully:', {
       id: calculation.id,
       calculator: calculatorName,
       total: limitedCalculations.length,
-      events: ['storage', 'calculatorUpdate']
+      eventsDispatched: events,
+      timestamp: new Date().toISOString()
     });
-    
+
     return calculation;
   } catch (error) {
     console.error('❌ Error saving calculation:', error);
@@ -69,7 +121,8 @@ export const getSavedCalculations = () => {
     console.log('📖 Reading calculations from storage:', {
       count: calculations.length,
       storageSize: saved ? saved.length : 0,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      sample: calculations.slice(0, 2).map(c => ({ id: c.id, name: c.calculatorName }))
     });
     
     return calculations;
@@ -88,27 +141,53 @@ export const deleteCalculation = (calculationId) => {
   try {
     const savedCalculations = getSavedCalculations();
     const filteredCalculations = savedCalculations.filter(calc => calc.id !== calculationId);
+    
     localStorage.setItem(STORAGE_KEYS.CALCULATIONS, JSON.stringify(filteredCalculations));
+
+    // Enhanced event dispatching
+    const events = [];
     
-    // Trigger multiple events for better detection
-    const storageEvent = new StorageEvent('storage', {
-      key: STORAGE_KEYS.CALCULATIONS,
-      newValue: JSON.stringify(filteredCalculations),
-      url: window.location.href
-    });
-    
-    const customEvent = new CustomEvent('calculatorUpdate', {
-      detail: { deleted: calculationId, total: filteredCalculations.length }
-    });
-    
-    window.dispatchEvent(storageEvent);
-    window.dispatchEvent(customEvent);
-    
-    console.log('🗑️ Calculation deleted and events dispatched:', {
+    try {
+      const storageEvent = new StorageEvent('storage', {
+        key: STORAGE_KEYS.CALCULATIONS,
+        newValue: JSON.stringify(filteredCalculations),
+        url: window.location.href
+      });
+      window.dispatchEvent(storageEvent);
+      events.push('storage');
+    } catch (e) {
+      console.warn('Could not dispatch storage event:', e);
+    }
+
+    try {
+      const customEvent = new CustomEvent('calculatorUpdate', {
+        detail: {
+          action: 'delete',
+          deletedId: calculationId,
+          total: filteredCalculations.length,
+          timestamp: Date.now()
+        }
+      });
+      window.dispatchEvent(customEvent);
+      document.dispatchEvent(customEvent);
+      events.push('calculatorUpdate');
+    } catch (e) {
+      console.warn('Could not dispatch custom event:', e);
+    }
+
+    try {
+      sessionStorage.setItem('calculation_updated', Date.now().toString());
+      events.push('sessionFlag');
+    } catch (e) {
+      console.warn('Could not set session flag:', e);
+    }
+
+    console.log('🗑️ Calculation deleted successfully:', {
       deletedId: calculationId,
-      remaining: filteredCalculations.length
+      remaining: filteredCalculations.length,
+      eventsDispatched: events
     });
-    
+
     return true;
   } catch (error) {
     console.error('❌ Error deleting calculation:', error);
@@ -119,22 +198,49 @@ export const deleteCalculation = (calculationId) => {
 export const clearAllCalculations = () => {
   try {
     localStorage.removeItem(STORAGE_KEYS.CALCULATIONS);
+
+    // Enhanced event dispatching
+    const events = [];
     
-    // Trigger multiple events for better detection
-    const storageEvent = new StorageEvent('storage', {
-      key: STORAGE_KEYS.CALCULATIONS,
-      newValue: null,
-      url: window.location.href
+    try {
+      const storageEvent = new StorageEvent('storage', {
+        key: STORAGE_KEYS.CALCULATIONS,
+        newValue: null,
+        url: window.location.href
+      });
+      window.dispatchEvent(storageEvent);
+      events.push('storage');
+    } catch (e) {
+      console.warn('Could not dispatch storage event:', e);
+    }
+
+    try {
+      const customEvent = new CustomEvent('calculatorUpdate', {
+        detail: {
+          action: 'clear',
+          cleared: true,
+          total: 0,
+          timestamp: Date.now()
+        }
+      });
+      window.dispatchEvent(customEvent);
+      document.dispatchEvent(customEvent);
+      events.push('calculatorUpdate');
+    } catch (e) {
+      console.warn('Could not dispatch custom event:', e);
+    }
+
+    try {
+      sessionStorage.setItem('calculation_updated', Date.now().toString());
+      events.push('sessionFlag');
+    } catch (e) {
+      console.warn('Could not set session flag:', e);
+    }
+
+    console.log('🧹 All calculations cleared successfully:', {
+      eventsDispatched: events
     });
-    
-    const customEvent = new CustomEvent('calculatorUpdate', {
-      detail: { cleared: true, total: 0 }
-    });
-    
-    window.dispatchEvent(storageEvent);
-    window.dispatchEvent(customEvent);
-    
-    console.log('🧹 All calculations cleared and events dispatched');
+
     return true;
   } catch (error) {
     console.error('❌ Error clearing calculations:', error);
@@ -252,7 +358,8 @@ export const getCalculationStats = () => {
     total: calculations.length,
     thisMonth: calculations.filter(calc => {
       const calcDate = new Date(calc.timestamp);
-      return calcDate.getMonth() === now.getMonth() && calcDate.getFullYear() === now.getFullYear();
+      return calcDate.getMonth() === now.getMonth() && 
+             calcDate.getFullYear() === now.getFullYear();
     }).length,
     thisWeek: calculations.filter(calc => {
       const calcDate = new Date(calc.timestamp);
@@ -272,11 +379,27 @@ export const getMostUsedCalculators = () => {
   });
 
   return Object.entries(counts)
-    .sort(([, a], [, b]) => b - a)
+    .sort(([,a], [,b]) => b - a)
     .slice(0, 5)
     .map(([id, count]) => ({
       id,
       name: calculations.find(calc => calc.calculatorId === id)?.calculatorName || id,
       count
     }));
+};
+
+// Utility to check if calculations were recently updated
+export const wasRecentlyUpdated = () => {
+  try {
+    const lastUpdate = sessionStorage.getItem('calculation_updated');
+    if (!lastUpdate) return false;
+    
+    const updateTime = parseInt(lastUpdate);
+    const now = Date.now();
+    const fiveSecondsAgo = now - 5000;
+    
+    return updateTime > fiveSecondsAgo;
+  } catch (error) {
+    return false;
+  }
 };

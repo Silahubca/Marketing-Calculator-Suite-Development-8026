@@ -10,17 +10,18 @@ import Dashboard from './pages/Dashboard';
 import CalculatorPage from './pages/CalculatorPage';
 import BlogPage from './pages/BlogPage';
 import ArticlePage from './pages/ArticlePage';
+import ToolsPage from './pages/ToolsPage';
+import ToolDetailPage from './pages/ToolDetailPage';
+import AdminDashboard from './pages/AdminDashboard';
 import { calculators } from './data/calculators';
 import { blogPosts } from './data/blogPosts';
 
 // Scroll to top component
 const ScrollToTop = () => {
   const { pathname } = useLocation();
-
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);
-
   return null;
 };
 
@@ -41,6 +42,10 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/blog" element={<BlogPage />} />
+                <Route path="/tools" element={<ToolsPage />} />
+                <Route path="/tools/:toolId" element={<ToolDetailPage />} />
+                <Route path="/admin" element={<AdminDashboard />} />
+                
                 {calculators.map((calculator) => (
                   <Route
                     key={calculator.id}
@@ -48,6 +53,7 @@ function App() {
                     element={<CalculatorPage calculator={calculator} />}
                   />
                 ))}
+                
                 {blogPosts.map((post) => (
                   <Route
                     key={post.id}
@@ -55,6 +61,7 @@ function App() {
                     element={<ArticlePage post={post} />}
                   />
                 ))}
+                
                 {/* Catch all route for 404 */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
