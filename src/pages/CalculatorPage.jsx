@@ -137,14 +137,11 @@ const CalculatorPage = ({ calculator }) => {
               
               <div className="flex items-center space-x-2">
                 <SocialShareButtons 
-                  title={calculator.name}
-                  description={calculator.description}
-                  className="hidden md:flex"
+                  title={calculator.name} 
+                  description={calculator.description} 
+                  className="hidden md:flex" 
                 />
-                <button
-                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="Bookmark calculator"
-                >
+                <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Bookmark calculator">
                   <SafeIcon icon={FiBookmark} className="h-5 w-5" />
                 </button>
               </div>
@@ -152,8 +149,8 @@ const CalculatorPage = ({ calculator }) => {
 
             <div className="md:hidden mb-4">
               <SocialShareButtons 
-                title={calculator.name}
-                description={calculator.description}
+                title={calculator.name} 
+                description={calculator.description} 
               />
             </div>
           </motion.div>
@@ -187,24 +184,32 @@ const CalculatorPage = ({ calculator }) => {
           >
             <h3 className="text-lg font-semibold text-gray-900 mb-4">About This Calculator</h3>
             <p className="text-gray-600 mb-4">{calculator.longDescription || calculator.description}</p>
-            <div className="flex items-center space-x-4 text-sm text-gray-500">
-              <span>Free tool by</span>
-              <a
-                href="https://marketingstrategyexample.com"
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
-                MarketingStrategyExample.com
-              </a>
-              <span>•</span>
-              <span>Created by</span>
-              <a
-                href="https://silahub.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
-                SilaHub
-              </a>
+            
+            {/* Fixed Mobile Alignment */}
+            <div className="flex flex-col space-y-2 md:flex-row md:items-center md:space-y-0 md:space-x-4 text-sm text-gray-500">
+              <div className="flex flex-col space-y-1 md:flex-row md:items-center md:space-y-0 md:space-x-4">
+                <div className="flex items-center space-x-1">
+                  <span>Free tool by</span>
+                  <a 
+                    href="https://marketingstrategyexample.com" 
+                    className="text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    MarketingStrategyExample.com
+                  </a>
+                </div>
+                <span className="hidden md:inline">•</span>
+                <div className="flex items-center space-x-1">
+                  <span>Created by</span>
+                  <a 
+                    href="https://silahub.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    SilaHub
+                  </a>
+                </div>
+              </div>
             </div>
           </motion.div>
 

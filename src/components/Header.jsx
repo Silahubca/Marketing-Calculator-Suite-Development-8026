@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
 
-const { FiCalculator, FiMenu, FiX, FiBookOpen } = FiIcons;
+const { FiCalculator, FiMenu, FiX, FiBookOpen, FiBarChart } = FiIcons;
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -39,19 +39,23 @@ const Header = () => {
             <Link
               to="/"
               className={`text-sm font-medium transition-colors ${
-                location.pathname === '/'
-                  ? 'text-blue-600'
-                  : 'text-gray-700 hover:text-blue-600'
+                location.pathname === '/' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
               }`}
             >
               Calculators
             </Link>
             <Link
+              to="/dashboard"
+              className={`text-sm font-medium transition-colors ${
+                location.pathname === '/dashboard' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+              }`}
+            >
+              Dashboard
+            </Link>
+            <Link
               to="/blog"
               className={`text-sm font-medium transition-colors ${
-                location.pathname === '/blog'
-                  ? 'text-blue-600'
-                  : 'text-gray-700 hover:text-blue-600'
+                location.pathname === '/blog' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
               }`}
             >
               Marketing Blog
@@ -88,6 +92,13 @@ const Header = () => {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Calculators
+              </Link>
+              <Link
+                to="/dashboard"
+                className="text-gray-700 hover:text-blue-600 transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Dashboard
               </Link>
               <Link
                 to="/blog"

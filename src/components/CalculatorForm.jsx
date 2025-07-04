@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
+import { saveCalculation } from '../utils/storageUtils';
 
-const { FiCalculator, FiRefreshCw, FiInfo } = FiIcons;
+const { FiCalculator, FiRefreshCw, FiInfo, FiSave, FiCheck } = FiIcons;
 
 const CalculatorForm = ({ calculator }) => {
   const [inputs, setInputs] = useState(() => {
@@ -13,21 +14,41 @@ const CalculatorForm = ({ calculator }) => {
     });
     return initialInputs;
   });
-  
   const [result, setResult] = useState(null);
   const [showFormula, setShowFormula] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+
+  // Load calculation from URL parameters if present
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const loadId = urlParams.get('load');
+    if (loadId) {
+      // In a real implementation, you'd load the calculation by ID
+      // For now, we'll just clear the URL parameter
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   const handleInputChange = (key, value) => {
     setInputs(prev => ({
       ...prev,
       [key]: value
     }));
+    // Reset saved state when inputs change
+    setIsSaved(false);
   };
 
   const handleCalculate = () => {
     try {
       const calculatedResult = calculator.calculate(inputs);
       setResult(calculatedResult);
+      
+      // Auto-save calculation
+      saveCalculation(calculator.id, inputs, calculatedResult, calculator.name);
+      setIsSaved(true);
+      
+      // Reset saved indicator after 3 seconds
+      setTimeout(() => setIsSaved(false), 3000);
     } catch (error) {
       console.error('Calculation error:', error);
       setResult({ error: 'Please check your inputs and try again.' });
@@ -41,6 +62,7 @@ const CalculatorForm = ({ calculator }) => {
     });
     setInputs(resetInputs);
     setResult(null);
+    setIsSaved(false);
   };
 
   const isFormValid = calculator.inputs.every(input => {
@@ -58,15 +80,27 @@ const CalculatorForm = ({ calculator }) => {
       <div className="p-6 border-b border-gray-100">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-bold text-gray-900">{calculator.name}</h2>
-          <button
-            onClick={() => setShowFormula(!showFormula)}
-            className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
-          >
-            <SafeIcon icon={FiInfo} className="h-4 w-4" />
-            <span>{showFormula ? 'Hide' : 'Show'} Formula</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            {isSaved && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="inline-flex items-center space-x-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium"
+              >
+                <SafeIcon icon={FiCheck} className="h-4 w-4" />
+                <span>Saved</span>
+              </motion.div>
+            )}
+            <button
+              onClick={() => setShowFormula(!showFormula)}
+              className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
+            >
+              <SafeIcon icon={FiInfo} className="h-4 w-4" />
+              <span>{showFormula ? 'Hide' : 'Show'} Formula</span>
+            </button>
+          </div>
         </div>
-        
+
         {showFormula && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
@@ -80,7 +114,7 @@ const CalculatorForm = ({ calculator }) => {
             </code>
           </motion.div>
         )}
-        
+
         <p className="text-gray-600">{calculator.description}</p>
       </div>
 
@@ -142,7 +176,7 @@ const CalculatorForm = ({ calculator }) => {
             <SafeIcon icon={FiCalculator} className="h-5 w-5" />
             <span>Calculate</span>
           </motion.button>
-          
+
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -171,7 +205,14 @@ const CalculatorForm = ({ calculator }) => {
               </div>
             ) : (
               <div>
-                <h3 className="font-semibold text-gray-900 mb-4">Results</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-gray-900">Results</h3>
+                  {isSaved && (
+                    <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                      Automatically saved to your history
+                    </span>
+                  )}
+                </div>
                 <div className="space-y-3">
                   {Object.entries(result).map(([key, value]) => (
                     <div key={key} className="flex justify-between items-center">
@@ -179,17 +220,18 @@ const CalculatorForm = ({ calculator }) => {
                         {key.replace(/([A-Z])/g, ' $1').trim()}:
                       </span>
                       <span className="font-semibold text-gray-900">
-                        {typeof value === 'number' ? 
-                          (key.includes('percentage') || key.includes('rate') ? 
-                            `${value.toFixed(2)}%` : 
-                            value.toLocaleString('en-US', { 
-                              style: key.includes('cost') || key.includes('revenue') || key.includes('value') ? 'currency' : 'decimal',
-                              currency: 'USD',
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2
-                            })
-                          ) : value
-                        }
+                        {typeof value === 'number'
+                          ? key.includes('percentage') || key.includes('rate')
+                            ? `${value.toFixed(2)}%`
+                            : value.toLocaleString('en-US', {
+                                style: key.includes('cost') || key.includes('revenue') || key.includes('value')
+                                  ? 'currency'
+                                  : 'decimal',
+                                currency: 'USD',
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                              })
+                          : value}
                       </span>
                     </div>
                   ))}

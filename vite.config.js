@@ -4,7 +4,6 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
-  base: './',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')
@@ -12,11 +11,12 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    sourcemap: false,
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
           ui: ['framer-motion', 'react-icons'],
           utils: ['react-helmet-async']
         }

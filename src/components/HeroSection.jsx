@@ -38,7 +38,7 @@ const HeroSection = () => {
             Free Marketing Calculator Hub
           </span>
         </motion.h1>
-        
+
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -60,6 +60,7 @@ const HeroSection = () => {
           >
             Start Calculating Now
           </button>
+          
           <Link
             to="/blog"
             className="inline-flex items-center justify-center px-8 py-4 bg-white text-gray-700 font-semibold rounded-xl border border-gray-200 hover:bg-gray-50 transition-all duration-300 shadow-lg hover:shadow-xl"
@@ -96,27 +97,31 @@ const HeroSection = () => {
           transition={{ duration: 0.8, delay: 1.0 }}
           className="mt-12"
         >
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="text-sm text-gray-500 mb-6 font-medium">
             Trusted by marketing professionals worldwide • 100% Free Forever
           </p>
-          <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
-            <span>Created by</span>
-            <a
-              href="https://silahub.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-700 font-medium"
-            >
-              SilaHub
-            </a>
-            <span>•</span>
-            <span>Hosted on</span>
-            <a
-              href="https://marketingstrategyexample.com"
-              className="text-blue-600 hover:text-blue-700 font-medium"
-            >
-              MarketingStrategyExample.com
-            </a>
+          
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-sm text-gray-500">
+            <div className="flex items-center gap-2">
+              <span>Created by</span>
+              <a 
+                href="https://silahub.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
+              >
+                SilaHub
+              </a>
+            </div>
+            
+            <span className="hidden sm:inline text-gray-300">•</span>
+            
+            <div className="flex items-center gap-2">
+              <span>Hosted on</span>
+              <span className="text-blue-600 font-medium">
+                MarketingStrategyExample.com
+              </span>
+            </div>
           </div>
         </motion.div>
       </div>
