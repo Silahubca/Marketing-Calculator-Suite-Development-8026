@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
-import { getSavedCalculations } from '../utils/storageUtils';
+import { useCalculations } from '../contexts/CalculationContext';
 
 const { FiTrendingUp, FiCalculator, FiClock, FiTarget, FiBarChart, FiPieChart } = FiIcons;
 
 const DashboardStats = () => {
+  const { calculations } = useCalculations();
   const [stats, setStats] = useState({
     totalCalculations: 0,
     uniqueCalculators: 0,
@@ -16,42 +17,41 @@ const DashboardStats = () => {
   });
 
   useEffect(() => {
+    console.log('📊 DashboardStats: Calculating stats for', calculations.length, 'calculations');
     calculateStats();
-  }, []);
+  }, [calculations]);
 
   const calculateStats = () => {
     try {
-      const calculations = getSavedCalculations();
-      
       // Total calculations
       const totalCalculations = calculations.length;
-      
+
       // Unique calculators used
       const uniqueCalculators = new Set(calculations.map(calc => calc.calculatorId)).size;
-      
+
       // Calculations this week
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
       const thisWeek = calculations.filter(calc => 
         new Date(calc.timestamp) >= oneWeekAgo
       ).length;
-      
+
       // Most used calculator
       const calculatorCounts = {};
       calculations.forEach(calc => {
         calculatorCounts[calc.calculatorId] = (calculatorCounts[calc.calculatorId] || 0) + 1;
       });
-      
+
       const mostUsed = Object.keys(calculatorCounts).length > 0 
         ? Object.entries(calculatorCounts).reduce((a, b) => 
             calculatorCounts[a[0]] > calculatorCounts[b[0]] ? a : b
           )
         : null;
-      
+
       // Recent activity (last 5 calculations)
       const recentActivity = calculations.slice(0, 5);
-      
-      setStats({
+
+      const newStats = {
         totalCalculations,
         uniqueCalculators,
         thisWeek,
@@ -61,10 +61,12 @@ const DashboardStats = () => {
           count: mostUsed[1]
         } : null,
         recentActivity
-      });
+      };
+
+      setStats(newStats);
+      console.log('✅ DashboardStats: Stats calculated', newStats);
     } catch (error) {
-      console.error('Error calculating stats:', error);
-      // Set default stats on error
+      console.error('❌ DashboardStats: Error calculating stats:', error);
       setStats({
         totalCalculations: 0,
         uniqueCalculators: 0,
@@ -108,7 +110,7 @@ const DashboardStats = () => {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      {/* Stats Cards - Mobile Optimized Grid */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {statCards.map((stat, index) => (
           <motion.div
@@ -132,7 +134,7 @@ const DashboardStats = () => {
         ))}
       </div>
 
-      {/* Recent Activity - Mobile Optimized */}
+      {/* Recent Activity */}
       {stats.recentActivity.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -148,7 +150,7 @@ const DashboardStats = () => {
           </div>
           <div className="space-y-2 md:space-y-3">
             {stats.recentActivity.map((activity, index) => (
-              <div key={activity.id} className="flex items-center space-x-3 p-2 md:p-3 bg-gray-50 rounded-lg">
+              <div key={`${activity.id}-${index}`} className="flex items-center space-x-3 p-2 md:p-3 bg-gray-50 rounded-lg">
                 <div className="w-5 h-5 md:w-6 md:h-6 bg-blue-100 rounded-full flex items-center justify-center">
                   <SafeIcon icon={FiPieChart} className="h-2 w-2 md:h-3 md:w-3 text-blue-600" />
                 </div>

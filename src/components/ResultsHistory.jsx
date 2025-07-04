@@ -2,34 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
-import { getSavedCalculations, deleteCalculation, exportCalculationsToCSV, exportCalculationsToPDF } from '../utils/storageUtils';
+import { useCalculations } from '../contexts/CalculationContext';
+import { deleteCalculation, exportCalculationsToCSV, exportCalculationsToPDF } from '../utils/storageUtils';
 
-const { FiHistory, FiTrash2, FiDownload, FiFilter, FiCalendar, FiCalculator, FiTrendingUp, FiX, FiChevronDown } = FiIcons;
+const { FiHistory, FiTrash2, FiDownload, FiFilter, FiCalendar, FiCalculator } = FiIcons;
 
 const ResultsHistory = ({ onSelectCalculation, selectedCalculatorId = null }) => {
-  const [calculations, setCalculations] = useState([]);
+  const { calculations, forceRefresh } = useCalculations();
   const [filteredCalculations, setFilteredCalculations] = useState([]);
   const [filterType, setFilterType] = useState('all');
   const [sortBy, setSortBy] = useState('date');
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    loadCalculations();
-  }, []);
-
-  useEffect(() => {
+    console.log('📋 ResultsHistory: Filtering', calculations.length, 'calculations');
     filterAndSortCalculations();
   }, [calculations, filterType, sortBy, selectedCalculatorId]);
-
-  const loadCalculations = () => {
-    try {
-      const saved = getSavedCalculations();
-      setCalculations([...saved]); // Create new array reference
-    } catch (error) {
-      console.error('Error loading calculations:', error);
-      setCalculations([]);
-    }
-  };
 
   const filterAndSortCalculations = () => {
     let filtered = [...calculations];
@@ -59,12 +47,13 @@ const ResultsHistory = ({ onSelectCalculation, selectedCalculatorId = null }) =>
     });
 
     setFilteredCalculations(filtered);
+    console.log('✅ ResultsHistory: Filtered to', filtered.length, 'calculations');
   };
 
   const handleDeleteCalculation = (calculationId) => {
     try {
       deleteCalculation(calculationId);
-      loadCalculations();
+      forceRefresh();
     } catch (error) {
       console.error('Error deleting calculation:', error);
     }
@@ -95,9 +84,15 @@ const ResultsHistory = ({ onSelectCalculation, selectedCalculatorId = null }) =>
         return `${value.toFixed(2)}%`;
       }
       if (key.includes('cost') || key.includes('revenue') || key.includes('value') || key.includes('Revenue') || key.includes('Cost')) {
-        return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        return `$${value.toLocaleString('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })}`;
       }
-      return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return value.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
     }
     return value;
   };
@@ -129,7 +124,7 @@ const ResultsHistory = ({ onSelectCalculation, selectedCalculatorId = null }) =>
       animate={{ opacity: 1, y: 0 }}
       className="bg-white rounded-2xl shadow-soft border border-gray-100 overflow-hidden"
     >
-      {/* Mobile-Optimized Header */}
+      {/* Header */}
       <div className="p-4 md:p-6 border-b border-gray-100">
         <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
           <div className="flex items-center space-x-3">
@@ -143,7 +138,6 @@ const ResultsHistory = ({ onSelectCalculation, selectedCalculatorId = null }) =>
               </p>
             </div>
           </div>
-          
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setShowFilters(!showFilters)}
@@ -167,7 +161,7 @@ const ResultsHistory = ({ onSelectCalculation, selectedCalculatorId = null }) =>
           </div>
         </div>
 
-        {/* Mobile-Optimized Filters */}
+        {/* Filters */}
         <AnimatePresence>
           {showFilters && (
             <motion.div
@@ -190,6 +184,7 @@ const ResultsHistory = ({ onSelectCalculation, selectedCalculatorId = null }) =>
                     ))}
                   </select>
                 </div>
+                
                 <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-2">
                   <label className="text-sm font-medium text-gray-700">Sort:</label>
                   <select
@@ -208,12 +203,12 @@ const ResultsHistory = ({ onSelectCalculation, selectedCalculatorId = null }) =>
         </AnimatePresence>
       </div>
 
-      {/* Mobile-Optimized Calculations List */}
+      {/* Calculations List */}
       <div className="max-h-96 md:max-h-[32rem] overflow-y-auto">
         <div className="divide-y divide-gray-100">
           {filteredCalculations.map((calculation, index) => (
             <motion.div
-              key={calculation.id}
+              key={`${calculation.id}-${index}`}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
@@ -238,8 +233,8 @@ const ResultsHistory = ({ onSelectCalculation, selectedCalculatorId = null }) =>
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Key Results Preview - Mobile Optimized */}
+
+                  {/* Key Results Preview */}
                   <div className="ml-9 md:ml-11 space-y-1">
                     {Object.entries(calculation.results).slice(0, 2).map(([key, value]) => (
                       <div key={key} className="flex items-center justify-between text-xs md:text-sm">
@@ -258,7 +253,7 @@ const ResultsHistory = ({ onSelectCalculation, selectedCalculatorId = null }) =>
                     )}
                   </div>
                 </div>
-                
+
                 <button
                   onClick={(e) => {
                     e.stopPropagation();

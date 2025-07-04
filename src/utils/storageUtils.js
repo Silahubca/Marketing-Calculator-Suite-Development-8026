@@ -24,17 +24,39 @@ export const saveCalculation = (calculatorId, inputs, results, calculatorName) =
     
     localStorage.setItem(STORAGE_KEYS.CALCULATIONS, JSON.stringify(limitedCalculations));
     
-    // Trigger storage event manually for same-window updates
-    window.dispatchEvent(new StorageEvent('storage', {
+    // Trigger multiple events for better detection
+    const storageEvent = new StorageEvent('storage', {
       key: STORAGE_KEYS.CALCULATIONS,
       newValue: JSON.stringify(limitedCalculations),
       url: window.location.href
-    }));
+    });
     
-    console.log('Calculation saved:', calculation);
+    const customEvent = new CustomEvent('calculatorUpdate', {
+      detail: { calculation, total: limitedCalculations.length }
+    });
+    
+    // Dispatch events
+    window.dispatchEvent(storageEvent);
+    window.dispatchEvent(customEvent);
+    
+    // Also try postMessage for cross-frame communication
+    if (window.parent !== window) {
+      window.parent.postMessage({
+        type: 'calculationSaved',
+        data: { calculation, total: limitedCalculations.length }
+      }, '*');
+    }
+    
+    console.log('💾 Calculation saved and events dispatched:', {
+      id: calculation.id,
+      calculator: calculatorName,
+      total: limitedCalculations.length,
+      events: ['storage', 'calculatorUpdate']
+    });
+    
     return calculation;
   } catch (error) {
-    console.error('Error saving calculation:', error);
+    console.error('❌ Error saving calculation:', error);
     return null;
   }
 };
@@ -43,10 +65,16 @@ export const getSavedCalculations = () => {
   try {
     const saved = localStorage.getItem(STORAGE_KEYS.CALCULATIONS);
     const calculations = saved ? JSON.parse(saved) : [];
-    console.log('Retrieved calculations:', calculations.length);
+    
+    console.log('📖 Reading calculations from storage:', {
+      count: calculations.length,
+      storageSize: saved ? saved.length : 0,
+      timestamp: new Date().toISOString()
+    });
+    
     return calculations;
   } catch (error) {
-    console.error('Error loading saved calculations:', error);
+    console.error('❌ Error loading saved calculations:', error);
     return [];
   }
 };
@@ -62,17 +90,28 @@ export const deleteCalculation = (calculationId) => {
     const filteredCalculations = savedCalculations.filter(calc => calc.id !== calculationId);
     localStorage.setItem(STORAGE_KEYS.CALCULATIONS, JSON.stringify(filteredCalculations));
     
-    // Trigger storage event manually for same-window updates
-    window.dispatchEvent(new StorageEvent('storage', {
+    // Trigger multiple events for better detection
+    const storageEvent = new StorageEvent('storage', {
       key: STORAGE_KEYS.CALCULATIONS,
       newValue: JSON.stringify(filteredCalculations),
       url: window.location.href
-    }));
+    });
     
-    console.log('Calculation deleted:', calculationId);
+    const customEvent = new CustomEvent('calculatorUpdate', {
+      detail: { deleted: calculationId, total: filteredCalculations.length }
+    });
+    
+    window.dispatchEvent(storageEvent);
+    window.dispatchEvent(customEvent);
+    
+    console.log('🗑️ Calculation deleted and events dispatched:', {
+      deletedId: calculationId,
+      remaining: filteredCalculations.length
+    });
+    
     return true;
   } catch (error) {
-    console.error('Error deleting calculation:', error);
+    console.error('❌ Error deleting calculation:', error);
     return false;
   }
 };
@@ -81,17 +120,24 @@ export const clearAllCalculations = () => {
   try {
     localStorage.removeItem(STORAGE_KEYS.CALCULATIONS);
     
-    // Trigger storage event manually for same-window updates
-    window.dispatchEvent(new StorageEvent('storage', {
+    // Trigger multiple events for better detection
+    const storageEvent = new StorageEvent('storage', {
       key: STORAGE_KEYS.CALCULATIONS,
       newValue: null,
       url: window.location.href
-    }));
+    });
     
-    console.log('All calculations cleared');
+    const customEvent = new CustomEvent('calculatorUpdate', {
+      detail: { cleared: true, total: 0 }
+    });
+    
+    window.dispatchEvent(storageEvent);
+    window.dispatchEvent(customEvent);
+    
+    console.log('🧹 All calculations cleared and events dispatched');
     return true;
   } catch (error) {
-    console.error('Error clearing calculations:', error);
+    console.error('❌ Error clearing calculations:', error);
     return false;
   }
 };

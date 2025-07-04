@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
-import { saveCalculation } from '../utils/storageUtils';
+import { useCalculations } from '../contexts/CalculationContext';
 
 const { FiCalculator, FiRefreshCw, FiInfo, FiSave, FiCheck } = FiIcons;
 
 const CalculatorForm = ({ calculator }) => {
+  const { saveCalculation } = useCalculations();
+  
   const [inputs, setInputs] = useState(() => {
     const initialInputs = {};
     calculator.inputs.forEach(input => {
@@ -14,6 +16,7 @@ const CalculatorForm = ({ calculator }) => {
     });
     return initialInputs;
   });
+
   const [result, setResult] = useState(null);
   const [showFormula, setShowFormula] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -30,10 +33,7 @@ const CalculatorForm = ({ calculator }) => {
   }, []);
 
   const handleInputChange = (key, value) => {
-    setInputs(prev => ({
-      ...prev,
-      [key]: value
-    }));
+    setInputs(prev => ({ ...prev, [key]: value }));
     // Reset saved state when inputs change
     setIsSaved(false);
   };
@@ -42,13 +42,16 @@ const CalculatorForm = ({ calculator }) => {
     try {
       const calculatedResult = calculator.calculate(inputs);
       setResult(calculatedResult);
-      
-      // Auto-save calculation
-      saveCalculation(calculator.id, inputs, calculatedResult, calculator.name);
-      setIsSaved(true);
-      
-      // Reset saved indicator after 3 seconds
-      setTimeout(() => setIsSaved(false), 3000);
+
+      // Save calculation using context
+      const saved = saveCalculation(calculator.id, inputs, calculatedResult, calculator.name);
+      if (saved) {
+        setIsSaved(true);
+        console.log('✅ Calculator: Calculation saved via context');
+        
+        // Reset saved indicator after 3 seconds
+        setTimeout(() => setIsSaved(false), 3000);
+      }
     } catch (error) {
       console.error('Calculation error:', error);
       setResult({ error: 'Please check your inputs and try again.' });
@@ -224,9 +227,7 @@ const CalculatorForm = ({ calculator }) => {
                           ? key.includes('percentage') || key.includes('rate')
                             ? `${value.toFixed(2)}%`
                             : value.toLocaleString('en-US', {
-                                style: key.includes('cost') || key.includes('revenue') || key.includes('value')
-                                  ? 'currency'
-                                  : 'decimal',
+                                style: key.includes('cost') || key.includes('revenue') || key.includes('value') ? 'currency' : 'decimal',
                                 currency: 'USD',
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2

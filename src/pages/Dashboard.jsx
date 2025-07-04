@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
 import * as FiIcons from 'react-icons/fi';
@@ -11,122 +11,30 @@ import IndustryBenchmarks from '../components/IndustryBenchmarks';
 import GoalTracker from '../components/GoalTracker';
 import PerformanceInsights from '../components/PerformanceInsights';
 import SavedCalculationModal from '../components/SavedCalculationModal';
-import { getSavedCalculations, clearAllCalculations } from '../utils/storageUtils';
+import { useCalculations } from '../contexts/CalculationContext';
 
 const { FiHome, FiTrash2, FiGrid, FiList, FiHelpCircle, FiMenu, FiX, FiRefreshCw } = FiIcons;
 
 const Dashboard = () => {
+  const location = useLocation();
+  const { 
+    calculations, 
+    isLoading, 
+    lastUpdate, 
+    clearAllCalculations, 
+    forceRefresh 
+  } = useCalculations();
+  
   const [selectedCalculation, setSelectedCalculation] = useState(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [viewMode, setViewMode] = useState('grid');
-  const [isLoading, setIsLoading] = useState(true);
-  const [calculations, setCalculations] = useState([]);
-  const [error, setError] = useState(null);
-  const [refreshKey, setRefreshKey] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const mountedRef = useRef(false);
-  const lastLoadTimeRef = useRef(0);
 
-  // Force refresh function
-  const forceRefresh = useCallback(() => {
-    console.log('Force refreshing dashboard...');
-    setRefreshKey(prev => prev + 1);
-  }, []);
-
-  // Enhanced data loading with debugging
-  const loadCalculations = useCallback(() => {
-    const now = Date.now();
-    
-    // Prevent rapid successive calls
-    if (now - lastLoadTimeRef.current < 100) {
-      console.log('Skipping rapid successive load call');
-      return;
-    }
-    
-    lastLoadTimeRef.current = now;
-    
-    console.log('Loading calculations - Start');
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Immediate load attempt
-      const savedCalculations = getSavedCalculations();
-      console.log('Calculations loaded:', savedCalculations.length, savedCalculations);
-      
-      if (mountedRef.current) {
-        setCalculations([...savedCalculations]);
-        setIsLoading(false);
-        console.log('State updated with calculations');
-      }
-    } catch (loadError) {
-      console.error('Error loading calculations:', loadError);
-      if (mountedRef.current) {
-        setError('Failed to load calculations');
-        setCalculations([]);
-        setIsLoading(false);
-      }
-    }
-  }, []);
-
-  // Mount tracking
+  // Refresh on route change
   useEffect(() => {
-    mountedRef.current = true;
-    console.log('Dashboard mounted');
-    
-    return () => {
-      mountedRef.current = false;
-      console.log('Dashboard unmounted');
-    };
-  }, []);
-
-  // Initial load
-  useEffect(() => {
-    console.log('Dashboard initial effect triggered');
-    loadCalculations();
-  }, [loadCalculations]);
-
-  // Refresh on key change
-  useEffect(() => {
-    if (refreshKey > 0) {
-      console.log('Refresh key changed:', refreshKey);
-      loadCalculations();
-    }
-  }, [refreshKey, loadCalculations]);
-
-  // Window focus handler
-  useEffect(() => {
-    const handleFocus = () => {
-      console.log('Window focused, refreshing data...');
-      if (mountedRef.current) {
-        loadCalculations();
-      }
-    };
-    
-    const handleStorageChange = (e) => {
-      console.log('Storage changed:', e.key);
-      if (e.key === 'marketing_calculations' && mountedRef.current) {
-        loadCalculations();
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (!document.hidden && mountedRef.current) {
-        console.log('Page became visible, refreshing...');
-        setTimeout(loadCalculations, 100);
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('storage', handleStorageChange);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('storage', handleStorageChange);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [loadCalculations]);
+    console.log('🏠 Dashboard: Route change, refreshing...');
+    forceRefresh();
+  }, [location.pathname, forceRefresh]);
 
   const handleSelectCalculation = (calculation) => {
     setSelectedCalculation(calculation);
@@ -140,12 +48,9 @@ const Dashboard = () => {
     if (showClearConfirm) {
       try {
         clearAllCalculations();
-        setCalculations([]);
         setShowClearConfirm(false);
-        forceRefresh();
       } catch (error) {
         console.error('Error clearing calculations:', error);
-        setError('Failed to clear calculations');
       }
     } else {
       setShowClearConfirm(true);
@@ -154,17 +59,16 @@ const Dashboard = () => {
   };
 
   const handleManualRefresh = () => {
-    console.log('Manual refresh triggered');
+    console.log('🔄 Dashboard: Manual refresh triggered');
     forceRefresh();
   };
 
   // Debug info
-  console.log('Dashboard render:', {
+  console.log('🎯 Dashboard state:', {
     isLoading,
     calculationsCount: calculations.length,
-    error,
-    refreshKey,
-    mounted: mountedRef.current
+    lastUpdate: new Date(lastUpdate).toLocaleTimeString(),
+    location: location.pathname
   });
 
   // Loading state
@@ -182,27 +86,6 @@ const Dashboard = () => {
     );
   }
 
-  // Error state
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <SafeIcon icon={FiGrid} className="h-6 w-6 text-red-600" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Dashboard</h3>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={loadCalculations}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <>
       <Helmet>
@@ -215,7 +98,7 @@ const Dashboard = () => {
       <div className="min-h-screen py-4 md:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
-          {/* Mobile-Optimized Header */}
+          {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -232,12 +115,10 @@ const Dashboard = () => {
                 <p className="text-sm md:text-base text-gray-600">
                   Advanced analytics and insights for data-driven marketing
                 </p>
-                {/* Debug info in development */}
-                {process.env.NODE_ENV === 'development' && (
-                  <p className="text-xs text-gray-400">
-                    Debug: {calculations.length} calculations loaded, key: {refreshKey}
-                  </p>
-                )}
+                {/* Simple Debug info */}
+                <div className="text-xs text-gray-400 mt-2">
+                  📊 {calculations.length} calculations | Updated: {new Date(lastUpdate).toLocaleTimeString()}
+                </div>
               </div>
 
               {/* Mobile Menu Button */}
@@ -380,23 +261,23 @@ const Dashboard = () => {
 
           {/* Dashboard Content */}
           {viewMode === 'grid' ? (
-            // Grid View - Mobile Optimized
+            // Grid View
             <>
               {/* Stats Overview */}
               <div className="mb-6 md:mb-8">
-                <DashboardStats key={`stats-${refreshKey}-${calculations.length}`} />
+                <DashboardStats />
               </div>
 
-              {/* Main Analytics - Mobile Stack */}
+              {/* Main Analytics */}
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-8 mb-6 md:mb-8">
-                <TrendCharts key={`trends-${refreshKey}-${calculations.length}`} />
-                <PerformanceInsights key={`insights-${refreshKey}-${calculations.length}`} />
+                <TrendCharts />
+                <PerformanceInsights />
               </div>
 
-              {/* Goals and Benchmarks - Mobile Stack */}
+              {/* Goals and Benchmarks */}
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-8 mb-6 md:mb-8">
-                <GoalTracker key={`goals-${refreshKey}-${calculations.length}`} />
-                <IndustryBenchmarks key={`benchmarks-${refreshKey}-${calculations.length}`} />
+                <GoalTracker />
+                <IndustryBenchmarks />
               </div>
 
               {/* Calculation History */}
@@ -405,39 +286,33 @@ const Dashboard = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.4 }}
               >
-                <ResultsHistory 
-                  key={`history-${refreshKey}-${calculations.length}`}
-                  onSelectCalculation={handleSelectCalculation} 
-                />
+                <ResultsHistory onSelectCalculation={handleSelectCalculation} />
               </motion.div>
             </>
           ) : (
-            // Detailed View - Mobile Optimized
+            // Detailed View
             <div className="space-y-6 md:space-y-8">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                 <div className="lg:col-span-2">
-                  <ResultsHistory 
-                    key={`history-detailed-${refreshKey}-${calculations.length}`}
-                    onSelectCalculation={handleSelectCalculation} 
-                  />
+                  <ResultsHistory onSelectCalculation={handleSelectCalculation} />
                 </div>
                 <div className="space-y-4 md:space-y-6">
-                  <DashboardStats key={`stats-detailed-${refreshKey}-${calculations.length}`} />
-                  <PerformanceInsights key={`insights-detailed-${refreshKey}-${calculations.length}`} />
+                  <DashboardStats />
+                  <PerformanceInsights />
                 </div>
               </div>
               
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-8">
-                <TrendCharts key={`trends-detailed-${refreshKey}-${calculations.length}`} />
+                <TrendCharts />
                 <div className="space-y-4 md:space-y-6">
-                  <GoalTracker key={`goals-detailed-${refreshKey}-${calculations.length}`} />
-                  <IndustryBenchmarks key={`benchmarks-detailed-${refreshKey}-${calculations.length}`} />
+                  <GoalTracker />
+                  <IndustryBenchmarks />
                 </div>
               </div>
             </div>
           )}
 
-          {/* Mobile-Optimized Help Section */}
+          {/* Help Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
